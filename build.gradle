@@ -1,0 +1,136 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "net.serenity-bdd:serenity-gradle-plugin:3.3.10"
+        classpath "net.serenity-bdd:serenity-single-page-report:3.3.10"
+    }
+}
+
+plugins {
+    id "org.sonarqube" version "3.4.0.2513"
+    id "java"
+    id "idea"
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "bancopichinchaec_sqa-aut-arq-serenitybdd"
+        property "sonar.organization", "bancopichinchaec"
+        property "sonar.host.url", "https://sonarcloud.io"
+    }
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+apply plugin: "net.serenity-bdd.serenity-gradle-plugin"
+
+//for karate
+sourceSets {
+    test {
+        java {
+            srcDir file('src/test/java')
+            exclude '**/*UiRunner*.java'
+        }
+        resources {
+            srcDir file('src/test/java')
+            exclude '**/*.java'
+        }
+    }
+}
+
+ext {
+    serenityCoreVersion = '3.7.0'
+}
+
+dependencies {
+    implementation group: 'org.slf4j', name: 'slf4j-reload4j', version: '2.0.7'
+    implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
+    implementation "net.serenity-bdd:serenity-core:${serenityCoreVersion}",
+            "net.serenity-bdd:serenity-cucumber:${serenityCoreVersion}",
+            "net.serenity-bdd:serenity-screenplay:${serenityCoreVersion}",
+            "net.serenity-bdd:serenity-screenplay-webdriver:${serenityCoreVersion}",
+            "net.serenity-bdd:serenity-screenplay-rest:${serenityCoreVersion}",
+            "net.serenity-bdd:serenity-ensure:${serenityCoreVersion}"
+    implementation group: 'org.antlr', name: 'ST4', version: '4.3.4'
+    implementation 'org.apache.poi:poi-ooxml:5.2.3'
+    implementation 'org.mongodb:mongodb-driver-sync:4.9.1'
+    implementation group: 'org.springframework', name: 'spring-jdbc', version: '6.0.9'
+    //Para conexion con Base de Datos SQL se debe activar el driver necesario
+    //implementation 'org.postgresql:postgresql:42.6.0'
+    //implementation 'com.microsoft.sqlserver:mssql-jdbc:12.4.0.jre11'
+    //implementation 'com.mysql:mysql-connector-j:8.1.0'
+    implementation 'org.json:json:20230618'
+    testImplementation 'com.intuit.karate:karate-junit4:1.4.0.RC3'
+    testImplementation 'com.intuit.karate:karate-netty:0.9.3.RC1'
+    testImplementation "com.intuit.karate:karate-apache:0.9.6"
+    testImplementation 'io.github.bonigarcia:webdrivermanager:5.5.3'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+}
+
+tasks.register('backupFeatures') {
+    dependsOn(clearReports)
+    doLast {
+        copy {
+            from "src/test/resources/features"
+            into "build/originalFeatures"
+        }
+    }
+}
+
+tasks.register('copyAssets') {
+    onlyIf {
+        new File('target/site/serenity/isManualTests').exists()
+    }
+    doLast {
+        copy {
+            from "src/test/resources/assets"
+            into "target/site/serenity/assets"
+        }
+    }
+}
+
+tasks.register('restoreFeatures') {
+    dependsOn(copyAssets)
+    doLast {
+        copy {
+            from "build/originalFeatures"
+            into "src/test/resources/features"
+        }
+
+        delete "build/originalFeatures"
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+compileJava.dependsOn(backupFeatures)
+
+test {
+    systemProperties System.getProperties()
+    maxParallelForks = 8
+    systemProperty "file.encoding", "utf-8"
+    systemProperty "cucumber.options", System.getProperty("cucumber.options")
+    //for karate
+    systemProperty "karate.options", System.properties.getProperty("karate.options")
+    systemProperty "karate.env", System.properties.getProperty("karate.env")
+    outputs.upToDateWhen { false }
+}
+
+serenity {
+    requirementsDir = "src/test/resources/features"
+    reports = ["single-page-html"]
+}
+
+gradle.startParameter.continueOnFailure = true
+
+test.finalizedBy(aggregate, reports, restoreFeatures)

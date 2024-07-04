@@ -1,0 +1,14 @@
+EJERCICIO:
+La página https://www.demoblaze.com/ proporciona la funcionalidad de registro (signup) y login.
+Utilizando un software para pruebas de servicios REST) realizar una prueba de cada uno de estos servicios:
+ 
+Signup: https://api.demoblaze.com/signup
+ 
+Login: https://api.demoblaze.com/login
+ 
+ 
+Identificar las entradas y capturar las salidas en cada uno de los siguientes casos:
+• Crear un nuevo usuario en signup
+• Intentar crear un usuario ya existente
+• Usuario y password correcto en login
+• Usuario y password incorrecto en login

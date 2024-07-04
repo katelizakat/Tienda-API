@@ -1,0 +1,71 @@
+name: $(SourceBranchName)-$(Date:yyyyMMdd)$(Rev:.r)
+
+resources:
+  repositories:
+  - repository: self
+  - repository: qa-pipeline-templates
+    type: git
+    name: BP-DevOps-Infrastructure/common-pipeline-template-sqa
+    ref: master
+  - repository: qa-utils-templates
+    type: git
+    name: BP-Quality-Management/common-pipeline-template-sqa
+    ref: master
+
+trigger:
+  - master
+
+parameters:
+  - name: NUM_AGENTES
+    displayName: 'Num agentes para ejecución'
+    default: 1
+    values:
+      - 1
+      - 2
+
+  - name: FLUJO
+    displayName: 'Flujo a ejecutar'
+    default: TodosWeb
+    values:
+      - TodosWeb
+      - TodosAPI
+      - TagFromVariable
+      - ParallelTest
+      - SerenityBDDWeb
+      - SerenityBDDApi
+      - SerenityBDDDataBase
+      - SerenityBDDMovil
+      - ManualTest
+      - TCS
+      - ConsultaIntentos
+      - SDtestExitoso
+      - LoginAzure
+      
+  - name: TIPO_TEST
+    displayName: 'Tipo de Test'
+    default: cucumber   
+    values:
+      - cucumber
+      - karate
+
+  - name: TIPO_DRIVER
+    displayName: 'Tipo de Driver'
+    default: chrome
+    values:
+      - chrome
+      - firefox
+      - edge
+      - appium
+
+variables:
+  - group: sqa-cross-generico
+  - group: sqa-cross-arq-serenitybdd
+
+stages:
+  - template: serenity/init.yml@qa-pipeline-templates
+    parameters:
+      NUM_AGENTES: ${{parameters.NUM_AGENTES}}
+      FLUJO: ${{parameters.FLUJO}}
+      TIPO_TEST: ${{parameters.TIPO_TEST}}
+      TIPO_DRIVER: ${{parameters.TIPO_DRIVER}}
+      TEST_EXTRA_PARAMETERS: -DQA-USER-AUTOMATION="$(QA-USER-AUTOMATION)" -DQA-PASS-AUTOMATION="$(QA-PASS-AUTOMATION)"
